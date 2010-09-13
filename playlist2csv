@@ -1,0 +1,40 @@
+#!/usr/bin/env ruby -KU
+
+require 'rubygems'
+require 'hpricot'
+require "fastercsv"
+require 'jcode'
+$KCODE = "u"
+
+def check_usage
+  unless ARGV.size == 2
+    puts "Usage: playlist2csv <path_to_input_file> <path_to_output_file>"
+    exit
+  end  
+end
+
+def parse_xml(file_path)
+  xml = Hpricot.parse(File.read(file_path))
+  (xml/"item").inject([]) do |memo, item|
+    memo << {:artist => item.search('field[@name="Artist"]').text,
+             :name   => item.search('field[@name="Name"]').text}
+  end
+end
+
+def write_csv(list)
+  destination = File.expand_path(ARGV[1])
+  FasterCSV.open(destination, "w") do |csv|
+    csv << ["Artist", "Name"]
+    list.each do |track|
+      csv << [track[:artist], track[:name]]
+    end 
+  end
+  puts "   -> file written to #{destination}"
+end
+
+if $0 == __FILE__
+  check_usage
+  raise "not a valid file" unless FileTest::exist?(File.expand_path(ARGV[0]))
+  write_csv(parse_xml(File.expand_path(ARGV[0])))
+end
+
